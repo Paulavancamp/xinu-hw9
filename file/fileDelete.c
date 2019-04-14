@@ -21,5 +21,8 @@ devcall fileDelete(int fd)
     //  and return its space to the free disk block list.
     //  Use the superblock's locks to guarantee mutually exclusive
     //  access to the directory index.
-    return OK;
+	filetab[fd].fn_state = FILE_FREE;
+	//call sbFreeBlock(struct superblock *psuper, int block);
+
+   return OK;
 }
