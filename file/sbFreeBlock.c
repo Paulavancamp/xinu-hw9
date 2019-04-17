@@ -54,11 +54,12 @@ devcall sbFreeBlock(struct superblock *psuper, int block)
  	newBlock->fr_count = 0;
 	newBlock->fr_next = NULL;
 	newBlock->fr_blocknum = block;
+	psuper->sb_freelst = newBlock;
 	/*swizzle*/
 	swizzle = psuper->sb_dirlst;
 	psuper->sb_dirlst = (struct dirblock *)swizzle->db_blocknum;
-    	seek(diskfd, psuper->sb_dirlst);
-	if(write(diskfd, freeblock, sizeof(struct freeblock))==SYSERR){
+    	seek(diskfd,psuper->sb_freelst);
+	if(write(diskfd, newBlock, sizeof(struct freeblock))==SYSERR){
 	    return SYSERR;
 	}
 	/*restore swizzle*/
@@ -68,15 +69,15 @@ devcall sbFreeBlock(struct superblock *psuper, int block)
     }
 
     //**CASE 2: if block is full
-    if(freeblock->fr_count==FREEBLOCKMAX){
+    if(freeblock->fr_count>=FREEBLOCKMAX){
 	//add to end of freelist
 	newBlock =  (struct freeblock*) malloc(sizeof(struct freeblock));
  	newBlock->fr_count = 0;
 	newBlock->fr_next = NULL;
 	newBlock->fr_blocknum = block;
 	freeblock->fr_next = newBlock;
-	seek(diskfd, block);
-	if(write(diskfd, freeblock, sizeof(struct freeblock))==SYSERR){
+	seek(diskfd, freeblock->fr_next);
+	if(write(diskfd, newBlock, sizeof(struct freeblock))==SYSERR){
 	    return SYSERR;
 	}
 	signal(psuper->sb_freelock);
@@ -87,7 +88,7 @@ devcall sbFreeBlock(struct superblock *psuper, int block)
     if(freeblock->fr_count<FREEBLOCKMAX){
     	freeblock = freeblock->fr_free[block];
     	freeblock->fr_count++;
- 	seek(diskfd, block);
+ 	seek(diskfd,freeblock->fr_blocknum);
 	if(write(diskfd, freeblock, sizeof(struct freeblock))==SYSERR){
 	    return SYSERR;
 	}
