@@ -32,50 +32,67 @@ devcall sbFreeBlock(struct superblock *psuper, int block)
     }
 
     //set up freeblock and others
-    freeblock = (struct freeblock*) malloc(sizeof(struct freeblock));
-    struct freeblock *newblock, *nextBlock;
+    struct freeblock *freeblock, *newBlock; 
     struct dirblock *swizzle;
+    int diskfd;
+    diskfd = phw-devtab;
     //enforce mutual exclusion	
     wait(psuper->sb_freelock);
 
 /************************CRITICAL SECTION*******************************/
+    //freeblock points to last block in the freelist
+    freeblock = (struct freeblock*) malloc(sizeof(struct freeblock));
+    freeblock = psuper->sb_freelst;
+    while(freeblock->fr_next != NULL){
+	freeblock = freeblock->fr_next;
+    }  
 
-    //initialize freeblock to be the freeblock
-    freeblock = psuper->sb_freelist;
-    //CASE 3: if no freeblk
+    //CASE 3: if no freeblock
     if(freeblock == NULL){
 	//create and add to head of sb freelist
-	printf("FREEBLOCK IS NULL \r\n\t");
-	newBlock->fr_count = 0;
+	newBlock =  (struct freeblock*) malloc(sizeof(struct freeblock));
+ 	newBlock->fr_count = 0;
 	newBlock->fr_next = NULL;
 	newBlock->fr_blocknum = block;
 	/*swizzle*/
 	swizzle = psuper->sb_dirlst;
 	psuper->sb_dirlst = (struct dirblock *)swizzle->db_blocknum;
-    	seek(diskfd, block);
-	if(write(diskfd, freeblk, sizeof(struct freeblock))){
+    	seek(diskfd, psuper->sb_dirlst);
+	if(write(diskfd, freeblock, sizeof(struct freeblock))==SYSERR){
 	    return SYSERR;
 	}
 	/*restore swizzle*/
 	psuper->sb_dirlst = swizzle;
-	signal(psuper->sb_freelist);
+	signal(psuper->sb_freelock);
 	return OK;
     }
+
     //**CASE 2: if block is full
     if(freeblock->fr_count==FREEBLOCKMAX){
 	//add to end of freelist
-	printf("BLOCK FULL\r\n\t");
-	newBlock->fr_count = 0;
+	newBlock =  (struct freeblock*) malloc(sizeof(struct freeblock));
+ 	newBlock->fr_count = 0;
 	newBlock->fr_next = NULL;
 	newBlock->fr_blocknum = block;
 	freeblock->fr_next = newBlock;
+	seek(diskfd, block);
+	if(write(diskfd, freeblock, sizeof(struct freeblock))==SYSERR){
+	    return SYSERR;
 	}
 	signal(psuper->sb_freelock);
 	return OK;
+	}
+
     //**CASE 1: Basic Case  
-    if(freelist->fr_count<MAXBLOCKCOUNT){
-    	freeblock->fr_free[block];
+    if(freeblock->fr_count<FREEBLOCKMAX){
+    	freeblock = freeblock->fr_free[block];
     	freeblock->fr_count++;
+ 	seek(diskfd, block);
+	if(write(diskfd, freeblock, sizeof(struct freeblock))==SYSERR){
+	    return SYSERR;
+	}
+	signal(psuper->sb_freelock);
+	return OK;
     }
 
 /***********************END CRITICAL SECTION*************************/

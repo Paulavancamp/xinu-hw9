@@ -7,7 +7,7 @@
 
 #include <xinu.h>
 
-void printFreeList(void)
+extern printFreeList(void)
 {
     int i;
     struct freeblock *fb = NULL;
@@ -34,7 +34,7 @@ void printFreeList(void)
     }
 }
 
-void printDirectory(void)
+extern printDirectory(void)
 {
     int i = 0;
 

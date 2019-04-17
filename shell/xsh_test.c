@@ -14,7 +14,24 @@
  */
 command xsh_test(int nargs, char *args[])
 {
-    //TODO: Test your O/S.
-    printf("This is where you should put some testing code.\n");
-    return OK;
+    // Test your O/S.
+	printf("This is where you should put some testing code.\n");
+	printFreeList();
+	printDirectory();
+	for(int i = 0;i<100;i++){
+		fileCreate("shmoop");
+        }
+	printFreeList();
+ 	printDirectory();
+	fileDelete(5);
+	fileDelete(4);
+/*	for(int j=0;j<5;j++){
+		fileDelete(j);
+	}*/
+	printFreeList();
+	printDirectory();
+  return OK;
+
+
+
 }
